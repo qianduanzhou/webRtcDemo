@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <p>约束</p>
+  <video autoplay width="100" height="100"></video>
+  <p>能够截取和录制屏幕</p>
+  <button id="btn">开始共享</button><br />
+  <video id="video2" autoplay width="100" height="100"></video>
+  <script>
+    /** 
+     * 媒体设备 
+     * 通过 navigator.mediaDevices 对象访问和管理浏览器支持的所有摄像头和麦克风
+     */
+    //约束条件 约束设备 如果不支持会报错进入catch阶段
+    navigator.mediaDevices.getUserMedia({
+      // video: {//配置对应分辨率
+      //   width: 640,
+      //   height: 480
+      // },
+
+      // video: { //获取这个区间的设备
+      //   width: {
+      //     min: 640,
+      //     max: 1024
+      //   },
+      //   height: {
+      //     min: 480,
+      //     max: 768
+      //   }
+      //   // width: {//摄像头不支持的分辨率会报错
+      //   //   min: 1920
+      //   // },
+      //   // height: {
+      //   //   min: 1080
+      //   // }
+      // }
+
+      // video: {//确切值
+      //   width: {
+      //     exact: 1024,
+      //   },
+      //   height: {
+      //     exact: 720
+      //   }
+      // }
+
+      video: { //理想值 有更高的权重 和第一个写法一样
+        width: {
+          ideal: 1280,
+        },
+        height: {
+          ideal: 720
+        }
+      },
+      //此外移动端还可以获取前后摄像头等
+      // video: { facingMode: "user" }
+      //以及帧率
+      // video: { frameRate: { min: 10, ideal: 30, max: 60 } }
+    }).then(media => {
+      let video = document.querySelector('video');
+      console.log('media', media);
+      video.srcObject = media;
+      /**getTracks获取MediaStreamTrack实例列表 */
+      //getSettings获取某个媒体流的特定轨道的实际配置
+      let mediaStreamTrack = media.getTracks()[0];
+      console.log('MediaStreamTrack ', mediaStreamTrack);
+      console.log('getSettings', mediaStreamTrack.getSettings())
+      //applyConstraints来更新已打开的媒体设备上的轨道约束条件
+      mediaStreamTrack.applyConstraints({
+        width: {
+          ideal: 720,
+        },
+        height: {
+          ideal: 720
+        }
+      })
+      //mediaStreamTrack实例中有可以通过enabled切换是否可用
+      // mediaStreamTrack.enabled = false;
+    }).catch(err => {
+      console.log('err', err);
+    })
+    /**
+     * 显示媒体
+     */
+    //getDisplayMedia 能够截取和录制屏幕的应用必须使用 Display Media API
+    const btn = document.querySelector('#btn');
+    btn.addEventListener('click', getDisplayMedia);
+    function getDisplayMedia() {
+      navigator.mediaDevices.getDisplayMedia({
+        video: {
+          cursor: 'always' | 'motion' | 'never',
+          displaySurface: 'application' | 'browser' | 'monitor' | 'window'
+        }
+      }).then(media => {
+        console.log('media', media);
+        let video = document.querySelector('#video2');
+        video.srcObject = media;
+      }).catch(err => {
+        console.log('err', err);
+      })
+    }
+  </script>
+</body>
+
+</html>

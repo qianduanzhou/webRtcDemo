@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TURN 服务器</title>
+</head>
+
+<body>
+  <script>
+    /**
+     * 对于大多数 WebRTC 应用，服务器在服务器之间中继流量时需要使用服务器，因为客户端之间通常无法建立直接套接字（除非它们位于同一个本地网络中）。
+     * 解决此问题的常见方法是使用 TURN 服务器。
+     * 该术语代表围绕 NAT 的遍历使用，是一种用于中继网络流量的协议。
+     * 目前，TURN 服务器有多种选择，既可作为自托管应用（例如开源 COTURN 项目），也可作为云端服务使用。
+     * 拥有可在线使用的 TURN 服务器后，您只需要正确的 RTCConfiguration 供客户端应用使用。
+     * 以下代码段展示了 RTCPeerConnection 的示例配置，其中 TURN 服务器的主机名为 my-turn-server.mycompany.com，端口为 19403。
+     * 配置对象还支持使用 username 和 credentials 属性来保护对服务器的访问。
+     * 连接到 TURN 服务器时，必须执行这些操作。
+     */
+    const iceConfiguration = {
+      iceServers: [{
+        urls: 'turn:my-turn-server.mycompany.com:19403',
+        username: 'optional-username',
+        credentials: 'auth-token'
+      }]
+    }
+
+    const peerConnection = new RTCPeerConnection(iceConfiguration);
+  </script>
+</body>
+
+</html>

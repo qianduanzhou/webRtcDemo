@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <script>
+    /**
+     * 远程数据流入门
+     * RTCPeerConnection 连接到远程对等设备后，就可以在它们之间流式传输音频和视频。
+     * 此时，我们会将从 getUserMedia() 收到的数据流连接到 RTCPeerConnection。
+     * 媒体流包含至少一个媒体轨道，当我们想将媒体传输到远程对等设备时，它们会分别添加到 RTCPeerConnection 中。
+     * 轨道可以在连接到远程对等方之前添加到 RTCPeerConnection，因此最好尽早执行此设置，而不是等待连接完成。
+     */
+    const localStream = await getUserMedia({
+      vide: true,
+      audio: true
+    });
+    const peerConnection = new RTCPeerConnection(iceConfig);
+    localStream.getTracks().forEach(track => {
+      peerConnection.addTrack(track, localStream);
+    });
+    /**
+     * 添加远程轨道
+     * 为了接收由另一个对等方添加的远程轨道，我们会在本地 RTCPeerConnection 上注册一个监听器，用于监听 track 事件。
+     * RTCTrackEvent 包含一个 MediaStream 对象数组，这些对象与对等项的相应本地数据流具有相同的 MediaStream.id 值。
+     * 请注意，尽管 MediaStream ID 在对等端的两端均匹配，但 MediaStreamTrack ID 通常并非如此。
+     */
+    const remoteVideo = document.querySelector('#remoteVideo');
+
+    peerConnection.addEventListener('track', async (event) => {
+      const [remoteStream] = event.streams;
+      remoteVideo.srcObject = remoteStream;
+    });
+  </script>
+</body>
+
+</html>

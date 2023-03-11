@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <script>
+    /**
+     * 对等连接
+     * 点对点连接是 WebRTC 规范的一部分，该规范旨在对点一台计算机上的两台应用进行连接，以使用点对点协议进行通信。
+     */
+
+    /**
+     * 信令
+     * WebRTC 规范包含用于与 ICE（互联网连接建立）服务器通信的 API，但信令组件并不属于该组件。
+     * 需要发出信号才能让两个对等网络共享它们之间的连接方式。
+     * 这通常可以通过基于 HTTP 的常规 Web API（即 REST 服务或其他 RPC 机制）解决，在此过程中，网络应用可在发起对等连接之前中继必要的信息。
+     */
+    //参考代码
+    // Set up an asynchronous communication channel that will be
+    // used during the peer connection setup
+    const signalingChannel = new SignalingChannel(remoteClientId);
+    signalingChannel.addEventListener('message', message => {
+      // New message from remote client received
+    });
+
+    // Send an asynchronous message to the remote client
+    signalingChannel.send('Hello!');
+    /**
+     * 启动对等连接
+     * 1.发送方新建RTCPeerConnection对象，调用 createOffer() 以创建 RTCSessionDescription 对象并通过setLocalDescription()将其设置为本地说明，然后传递给接收方
+     * 2.接收方通过setRemoteDescription将接受的RTCSessionDescription对象设置为远程说明，然后新建RTCPeerConnection对象并通过createAnswer()方法创建答案，并通过setLocalDescription()设置为本地说明，然后传递给接收方。
+     * 3.发送方接收接收方发来的答案，将其设置为远程说明。
+     */
+    async function makeCall() {
+      const configuration = {
+        'iceServers': [{
+          'urls': 'stun:stun.l.google.com:19302'
+        }]
+      }
+      const peerConnection = new RTCPeerConnection(configuration);
+      signalingChannel.addEventListener('message', async message => {
+        if (message.answer) {
+          const remoteDesc = new RTCSessionDescription(message.answer);
+          await peerConnection.setRemoteDescription(remoteDesc);
+        }
+      });
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
+      signalingChannel.send({
+        'offer': offer
+      });
+    }
+    const peerConnection = new RTCPeerConnection(configuration);
+    signalingChannel.addEventListener('message', async message => {
+      if (message.offer) {
+        peerConnection.setRemoteDescription(new RTCSessionDescription(message.offer));
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        signalingChannel.send({
+          'answer': answer
+        });
+      }
+    });
+    /**
+     * Trickle ICE
+     * 创建 RTCPeerConnection 对象后，底层框架会使用提供的 ICE 服务器收集连接建立的候选对象（ICE 候选对象）。
+     * RTCPeerConnection 上的事件 icegatheringstatechange 会指示 ICE 收集的状态为（new、gathering 或 complete）。
+     * 要收集 ICE 候选对象，只需为 icecandidate 事件添加监听器即可。
+     * 针对该监听器发出的 RTCPeerConnectionIceEvent 将包含 candidate 属性，该属性表示应发送到远程对等端的新候选音频
+     */
+    // 当 RTCPeerConnection 通过 RTCPeerConnection.setLocalDescription() (en-US) 方法更改本地描述之后，该 RTCPeerConnection 会抛出 icecandidate 事件。
+    peerConnection.addEventListener('icecandidate', event => {
+      if (event.candidate) {
+        signalingChannel.send({
+          'new-ice-candidate': event.candidate
+        });
+      }
+    });
+
+    // Listen for remote ICE candidates and add them to the local RTCPeerConnection
+    signalingChannel.addEventListener('message', async message => {
+      if (message.iceCandidate) {
+        try {
+          await peerConnection.addIceCandidate(message.iceCandidate);
+        } catch (e) {
+          console.error('Error adding received ice candidate', e);
+        }
+      }
+    });
+    /**
+     * 已建立连接
+     */
+    // Listen for connectionstatechange on the local RTCPeerConnection
+    peerConnection.addEventListener('connectionstatechange', event => {
+      if (peerConnection.connectionState === 'connected') {
+        // Peers connected!
+      }
+    });
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <p>基础使用</p>
+  <video id="normal" width="100" height="100"></video>
+  <p>获取媒体列表</p>
+  <select id="availableCameras"></select>
+  <p>媒体限定</p>
+  <video id="limit" width="100" height="100" autoplay playsinline controls="false"></video>
+  <script>
+    /** 基础使用 navigator.mediaDevices.getUserMedia()*/
+    navigator.mediaDevices.getUserMedia({
+      'video': true,
+      'audio': true
+    }).then(stream => {
+      console.log('Got MediaStream:', stream);
+      let video = document.querySelector('video#normal');
+      video.srcObject = stream;
+      video.onloadedmetadata = function (e) {
+        video.play();
+      };
+    }).catch(err => {
+      console.error('Error accessing media devices.', err);
+    });
+
+    /** 查询媒体设备 navigator.mediaDevices.enumerateDevices()*/
+    async function getConnectedDevices(type, callback = () => {}) {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      if (type) {
+        const filtered = devices.filter(device => device.kind === type);
+        callback(filtered);
+        return Promise.resolve(filtered);
+      } else {
+        callback(devices);
+        return Promise.resolve(devices);
+      }
+    }
+    getConnectedDevices('videoinput', cameras => console.log('Cameras found', cameras));
+
+    /** 监听设备更改*/
+    // Updates the select element with the provided set of cameras
+    function updateCameraList(cameras) {
+      const listElement = document.querySelector('select#availableCameras');
+      listElement.innerHTML = '';
+      cameras.map(camera => {
+        const cameraOption = document.createElement('option');
+        cameraOption.label = camera.label;
+        cameraOption.value = camera.deviceId;
+        listElement.appendChild(cameraOption)
+      });
+    }
+    // Get the initial set of cameras connected
+    getConnectedDevices().then(videoCameras => {
+      updateCameraList(videoCameras);
+    });
+
+    // Listen for changes to media devices and update the list accordingly
+    navigator.mediaDevices.addEventListener('devicechange', event => {
+      getConnectedDevices().then(videoCameras => {
+        updateCameraList(videoCameras);
+      });
+    });
+
+    /** 媒体限制 限制打开指定的设备*/
+    async function openCamera(cameraId, minWidth, minHeight) {
+      const constraints = {
+        'audio': {
+          'echoCancellation': true
+        },
+        'video': {
+          'deviceId': cameraId,
+          'width': {
+            'min': minWidth //最低分辨率宽
+          },
+          'height': {
+            'min': minHeight //最低分辨率高
+          }
+        }
+      }
+      return await navigator.mediaDevices.getUserMedia(constraints);
+    }
+    getConnectedDevices('videoinput', async cameras => {
+      if (cameras && cameras.length > 0) {
+        // 想要获取一个最接近 1280x720 的相机分辨率的设备，如果没有会报错
+        // const stream = await openCamera(cameras[0].deviceId, 1280, 720);
+        const stream = await openCamera(cameras[0].deviceId, 640, 480);
+        let video = document.querySelector('video#limit');
+        video.srcObject = stream;
+      }
+    })
+  </script>
+</body>
+
+</html>
